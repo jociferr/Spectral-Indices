@@ -25,21 +25,21 @@ import astrotools
 def spec_ind(indices_file, spec_data, verbose=True):
     '''
     Second giant monster function that is going to do everything!
-
+    
     Parameters:
-      
+    
       *indices_file*
         File formatted as comma separated values that contains, in
         the following order:
           Author&Year,Line,NumMin,NumMax,DenMin,DenMax
-
+    
       *spec_data*
         Spectrum as a Python list or array with wavelength in position
         0 and flux in position 1.
-
+    
       *verbose*
         Boolean: Print warning messages.
-
+    
     Returns:
       
       List including the name & value of the index! (for now)
@@ -48,8 +48,7 @@ def spec_ind(indices_file, spec_data, verbose=True):
     
     
     indices = []
-    filename = indices_file
-    with open(filename) as f:
+    with open(indices_file) as f:
         csvreader = csv.reader(f)
         for row in csvreader:
             if row[0][0] != "#":
@@ -58,8 +57,8 @@ def spec_ind(indices_file, spec_data, verbose=True):
     namelist = []
     rangelist = []
     for x in range(len(indices)):
-        namelist[x] = indices[x][1]
-        rangelist[x] = indices[x][:2]
+        namelist.append(indices[x][1])
+        rangelist.append(map(float,indices[x][2:]))
     
     # Initialize numerator and denominator arrays according to number
     # of spectral indices to be measured.
@@ -75,11 +74,10 @@ def spec_ind(indices_file, spec_data, verbose=True):
     
     indexarray = numarray/denarray
     
-    # Put everything into a list of dictionaries.
-    spec_ind = []
+    # Put everything into a dictionary.
+    spec_ind = {}
     for x in range(len(namelist)):
-        dictionary = {namelist[x]:indexarray[x][0]}
-        spec_ind.append(dictionary)
+        spec_ind[namelist[x]] = indexarray[x][0]
     
     return spec_ind
 
