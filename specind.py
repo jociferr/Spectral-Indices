@@ -76,60 +76,74 @@ def spec_ind(indices_file, specData, plot=True, verbose=True):
     
     indexarray = numarray/denarray
     
-    print signum
-    print sigden
-
-    # Put everything into a dictionary.
-    spec_ind = [0]*length
+    # Put everything into a list of list, with first element the name
+    # of the index, and second element the value.
+    specind = []
     for x in range(len(namelist)):
-        spec_ind[x] = [namelist[x], "%.2f" % indexarray[x][0]]
+        specind.append([namelist[x], indexarray[x][0]])
 
 
-    if plot == True:
-        colors = ['red','darkred','purple','blue','darkgreen','orange','green','darkblue']
-        fig = plt.figure()
-        plt.plot(specData[0],specData[1])
+    if plot:
+#Polynomials:
+        poly_list = ['H2O_A07','H2OJ','H2OH','CH4K']
+        polyind = [0]*len(specind)
+        for name in poly_list:
+            for x in range(len(specind)):
+                if name == specind[x][0]:
+                    polyind[x] = specind[x][0]
+
+        H2O_A07=specind[polyind.index('H2O_A07')][1]
+        H2OJ=specind[polyind.index('H2OJ')][1]
+        H2OH=specind[polyind.index('H2OH')][1]
+        CH4K=specind[polyind.index('CH4K')][1]
+        #Allers07
+        spt_H2O_A07=(H2O_A07-0.77)/0.04
+        #Burgasser07
+        spt_H2OJ=1.949e1 -3.919e1*H2OJ + 1.312e2* H2OJ**2 -2.156e2* H2OJ**3 + 1.038e2* H2OJ**4 + 10
+        spt_H2OH=2.708e1 - 8.45e1*H2OH + 2.424e2* H2OH**2 - 3.381e2* H2OH**3 + 1.491e2* H2OH**4 + 10
+        spt_CH4K=1.885e1 - 2.246e1*CH4K + 2.534e1* CH4K**2 - 4.734* CH4K**3 - 1.259e1* CH4K**4 +10
+
+        polyind[polyind.index('H2OJ')] = spt_H2OJ
+        polyind[polyind.index('H2O_A07')] = spt_H2O_A07
+        polyind[polyind.index('H2OH')] = spt_H2OH
+        polyind[polyind.index('CH4K')] = spt_CH4K
+
+        colors = ['blue','darkblue','dodgerblue','darkcyan','darkgreen','green','darkred','red']
+        fig = plt.figure(figsize=(17,11))
+        plt.plot(specData[0],specData[1],c='k')
         plt.xlim(specData[0][0],specData[0][-1])
         patches = []
         lo = 2E-16
         for x in range(len(rangelist)):
-            yindex = numpy.where(specData[0]>=rangelist[x][0])
+            yindex1 = numpy.where(specData[0]>=rangelist[x][0])
+            yindex2 = numpy.where(specData[0]<=rangelist[x][1])
+            ymedian = yindex1[0][0] + (yindex2[0][-1]-yindex1[0][0])/2
             numx = rangelist[x][0]
-            numy = specData[1][yindex[0][0]]-signum[x]
+            numy = specData[1][ymedian]-signum[x]
             numwidth = rangelist[x][1]-rangelist[x][0]
             numheight = signum[x]*2
             numrec = Rectangle((numx,numy),numwidth,numheight,color=colors[x])
             patches.append(numrec)
             plt.gca().add_patch(numrec)
 
-            yindex = numpy.where(specData[0]>=rangelist[x][2])
+            yindex1 = numpy.where(specData[0]>=rangelist[x][2])
+            yindex2 = numpy.where(specData[0]<=rangelist[x][3])
+            ymedian = yindex1[0][0] + (yindex2[0][-1]-yindex1[0][0])/2
             denx = rangelist[x][2]
-            deny = specData[1][yindex[0][0]]-sigden[x]
+            deny = specData[1][ymedian]-sigden[x]
             denwidth = rangelist[x][3]-rangelist[x][2]
             denheight = sigden[x]*2
             denrec = Rectangle((denx,deny),denwidth,denheight,color=colors[x])
             patches.append(denrec)
             plt.gca().add_patch(denrec)
 
-            plt.text(denx,deny+lo,namelist[x],color=colors[x],ha='center')
-            plt.text(denx,deny-lo,spec_ind[x][1],color=colors[x],ha='center')
+            plt.text(denx,deny+lo/2,namelist[x],color=colors[x],ha='center')
+            plt.text(denx,deny-lo,"%.2f" % specind[x][1],color=colors[x],ha='center')
+            plt.text(denx,deny-lo/2,"%.2f" % polyind[x],color=colors[x],ha='center')
 
         plt.show()
 
-    return spec_ind
+    return specind
 
 #options: plots- filenames, directory, indices(file or dictionary)
-#include polynomials to predict spectral type using the indices
 
-#polynomials:
-#Allers07
-#spt_H2O_A07=(H2O_A07-0.77)/0.04
-#Burgasser07                                                                       
-#spt_H2OJ=1.949e1 -3.919e1*H2OJ + 1.312e2*H2OJ^2 -2.156e2*H2OJ^3 + 1.038e2*H2OJ^4
-#spt_H2OH=2.708e1 - 8.45e1 * H2OH + 2.424e2 * H2OH^2 - 3.381e2 *
-#H2OH^3 + 1.491e2 * H2OH^4
-#spt_CH4K=1.885e1 - 2.246e1* CH4K + 2.534e1 * CH4K^2 - 4.734 * CH4K^3
-#- 1.259e1 * CH4K^4
-#Testi                                                                             
-#spt_sH2OJ=10*((1.54 * sH2OJ) + 0.98)
-#
