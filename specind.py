@@ -9,7 +9,8 @@ Repository: https://github.com/jociferr/Spectral-Indices
 
 Requirements: numpy, astrotools, csv, matplotlib, input file of
 spectral indices (currently 'indices_nir.txt') formatted as comma
-separated values.
+separated values. specData & targetinfo are specific outputs from
+pull_data function.
 '''
 
 import numpy
@@ -48,82 +49,100 @@ def spec_ind(indices_file, specData, targetinfo, plot=True):
 
     # Read indices file.
     indices = []
-    with open(indices_file) as f:
-        csvreader = csv.reader(f)
-        for row in csvreader:
-            if row[0][0] != "#":
-                indices.append(row)
+    try:
+        with open(indices_file, 'rb') as f:
+            csvreader = csv.reader(f)
+            for row in csvreader:
+                if row[0][0] != "#":
+                    indices.append(row)
+        f.close()
+    except IOError:
+        print str(indices_file) + ' not found.'
+        return
     
     # Store indices info in list of names and numerator/denominator ranges.
-    namelist = []
-    rangelist = []
+    index_name = []
+    index_range = []
     for x in range(len(indices)):
-        namelist.append(indices[x][1])
-        rangelist.append(map(float,indices[x][2:]))
-
-    opt_type = []
-    nir_ind_type = []
-
-    #Get Data
-    #specData = astrotools.read_spec(specFiles,errors=True)
-    for y in range(len(specData)):
+        index_name.append(indices[x][1])
+        index_range.append(map(float,indices[x][2:]))
     
-        #objname = specFiles[y].rsplit('/',1)[1].split('.')[0]
-        objname = targetinfo[y].unum
+    for y in range(len(specData)):
         
         # Initialize numerator and denominator arrays according to number
         # of spectral indices to be measured.
-        length = len(namelist)
+        length = len(index_name)
         numarray = numpy.zeros((length,1))
         denarray = numpy.zeros((length,1))
         signum = [0]*length
         sigden = [0]*length
-        
-        # Use PERSONAL avg_flux function (outputs [avgflux,stddev]) over numerator and
-        # denominator ranges, then calculate indices by dividing.
-        for x in range(len(rangelist)):
-            [numarray[x],signum[x]] = astrotools.avg_flux(rangelist[x][0], rangelist[x][1], specData[y])
-            [denarray[x],sigden[x]] = astrotools.avg_flux(rangelist[x][2], rangelist[x][3], specData[y])
-    
-        indexarray = numarray/denarray
+        sig_ind = []
 
-        # Put everything into a list of list, with first element the name
-        # of the index, and second element the value.
-        specind = []
-        for x in range(len(namelist)):
-            specind.append([namelist[x], indexarray[x][0]])
-    
+
+        # Use avg_flux function (outputs [avgflux,stddev]) over numerator and
+        # denominator ranges, then calculate indices by dividing.
+        for x in range(len(index_range)):
+            [numarray[x],signum[x]] = astrotools.avg_flux(index_range[x][0], index_range[x][1], specData[y])
+            [denarray[x],sigden[x]] = astrotools.avg_flux(index_range[x][2], index_range[x][3], specData[y])
+            sig_ind.append(numpy.sqrt((signum[x]/denarray[x])**2+(numarray[x]*sigden[x])**2/denarray[x]**4))
+        
+        indexarray = numarray/denarray
+        
         #Polynomials:
-        poly_list = ['H2O_A07','H2OJ','H2OH','CH4K']
-        polyind = [0]*len(specind)
-        for name in poly_list:
-            for x in range(len(specind)):
-                if name == specind[x][0]:
-                    polyind[x] = specind[x][0]
-                
-        H2O_A07=specind[polyind.index('H2O_A07')][1]
-        H2OJ=specind[polyind.index('H2OJ')][1]
-        H2OH=specind[polyind.index('H2OH')][1]
-        CH4K=specind[polyind.index('CH4K')][1]
+        
+        H2O_A07=indexarray[index_name.index('H2O_A07')][0]
+        sig_H2O_A07=sig_ind[index_name.index('H2O_A07')]
+        H2OJ=indexarray[index_name.index('H2OJ')][0]
+        sig_H2OJ=sig_ind[index_name.index('H2OJ')]
+        H2OH=indexarray[index_name.index('H2OH')][0]
+        sig_H2OH=sig_ind[index_name.index('H2OH')]
+        CH4K=indexarray[index_name.index('CH4K')][0]
+        sig_CH4K=sig_ind[index_name.index('CH4K')]
+        
         #Allers07
         spt_H2O_A07=(H2O_A07-0.77)/0.04
+        sig_spt_H2O_A07=sig_H2O_A07/0.04
         #Burgasser07
         spt_H2OJ=1.949e1 -3.919e1*H2OJ + 1.312e2* H2OJ**2 -2.156e2* H2OJ**3 + 1.038e2* H2OJ**4 + 10
+        sig_spt_H2OJ=numpy.absolute(sig_H2OJ*(-3.919e1 + 1.312e2*2*H2OJ - 2.156e2*3*H2OJ**2 + 1.038e2*4*H2OJ**3))
         spt_H2OH=2.708e1 - 8.45e1*H2OH + 2.424e2* H2OH**2 - 3.381e2* H2OH**3 + 1.491e2* H2OH**4 + 10
+        sig_spt_H2OH=numpy.absolute(sig_H2OH*(-8.45e1 + 2.424e2*2*H2OH - 3.381e2*3*H2OH**2 + 1.491e2*4*H2OH**3))
         spt_CH4K=1.885e1 - 2.246e1*CH4K + 2.534e1* CH4K**2 - 4.734* CH4K**3 - 1.259e1* CH4K**4 + 10
+        sig_spt_CH4K=numpy.absolute(sig_CH4K*(-2.246e1 + 2.534e1*2*CH4K - 4.734*3*CH4K**2 - 1.259e1*4*CH4K**3))
         
-        polyind[polyind.index('H2OJ')] = spt_H2OJ
-        polyind[polyind.index('H2O_A07')] = spt_H2O_A07
-        polyind[polyind.index('H2OH')] = spt_H2OH
-        polyind[polyind.index('CH4K')] = spt_CH4K
-
-        predicted = numpy.mean([spt_H2OJ,spt_H2O_A07,spt_H2OH,spt_CH4K])
-        predicted_wo_CH4K = numpy.mean([spt_H2OJ,spt_H2O_A07,spt_H2OH])
+        spt_ind = [0]*length
+        spt_ind[index_name.index('H2OJ')] = spt_H2OJ
+        spt_ind[index_name.index('H2O_A07')] = spt_H2O_A07
+        spt_ind[index_name.index('H2OH')] = spt_H2OH
+        spt_ind[index_name.index('CH4K')] = spt_CH4K
         
-
-        for x in range(len(specind)):
-            specind[x] = ([namelist[x], indexarray[x][0], polyind[x]])
-
+        sig_spt = [0]*length
+        sig_spt[index_name.index('H2OJ')] = sig_spt_H2OJ[0]
+        sig_spt[index_name.index('H2O_A07')] = sig_spt_H2O_A07[0]
+        sig_spt[index_name.index('H2OH')] = sig_spt_H2OH[0]
+        sig_spt[index_name.index('CH4K')] = sig_spt_CH4K[0]
+        
+        spt_avg = numpy.mean([spt_H2OJ,spt_H2O_A07,spt_H2OH])
+        spt_stddev = numpy.std([spt_H2OJ,spt_H2O_A07,spt_H2OH])
+        spt_sigavg = numpy.mean([sig_spt_H2OJ,sig_spt_H2O_A07,sig_spt_H2OH])
+        
+        if len(targetinfo[y].sptype) >= 3 and targetinfo[y].sptype[-3] in ('p',':'):
+            spnum = float(targetinfo[y].sptype[1:-3])
+        elif targetinfo[y].sptype[-2]==':':
+            spnum = float(targetinfo[y].sptype[1:-2])
+        elif targetinfo[y].sptype[-1] in ('g','b',':','d'):
+            spnum = float(targetinfo[y].sptype[1:-1])
+        else:
+            spnum = float(targetinfo[y].sptype[1:])
+        if targetinfo[y].sptype[0] == 'L':
+            sptype = spnum + 10
+        if targetinfo[y].sptype[0] == 'T':
+            sptype = spnum + 20
+        
+        specind = [[0]*len(index_name)]*len(specData)
+        for x in range(len(index_name)):
+            specind[y][x] = ([index_name[x], indexarray[x][0], spt_ind[x], sptype])
+        
         #Make Plots
         colors = ['blue','darkblue','dodgerblue','darkcyan','darkgreen','green','darkred','red']
         fig = plt.figure(figsize=(19,11))
@@ -131,57 +150,60 @@ def spec_ind(indices_file, specData, targetinfo, plot=True):
         plt.xlim(specData[y][0][0],specData[y][0][-1])
         patches = []
         lo = plt.ylim()[1]/12
-        for x in range(len(rangelist)):
-            yindex1 = numpy.where(specData[y][0]>=rangelist[x][0])
-            yindex2 = numpy.where(specData[y][0]<=rangelist[x][1])
+        for x in range(len(index_range)):
+
+            # Make rectangle for numerator range.
+            yindex1 = numpy.where(specData[y][0]>=index_range[x][0])
+            yindex2 = numpy.where(specData[y][0]<=index_range[x][1])
             ymedian = yindex1[0][0] + (yindex2[0][-1]-yindex1[0][0])/2
-            numx = rangelist[x][0]
+            numx = index_range[x][0]
             numy = specData[y][1][ymedian]-signum[x]
-            numwidth = rangelist[x][1]-rangelist[x][0]
+            numwidth = index_range[x][1]-index_range[x][0]
             numheight = signum[x]*2
             numrec = Rectangle((numx,numy),numwidth,numheight,color=colors[x])
             patches.append(numrec)
             plt.gca().add_patch(numrec)
             
-            yindex1 = numpy.where(specData[y][0]>=rangelist[x][2])
-            yindex2 = numpy.where(specData[y][0]<=rangelist[x][3])
+            # Make rectangle for denominator range.
+            yindex1 = numpy.where(specData[y][0]>=index_range[x][2])
+            yindex2 = numpy.where(specData[y][0]<=index_range[x][3])
             ymedian = yindex1[0][0] + (yindex2[0][-1]-yindex1[0][0])/2
-            denx = rangelist[x][2]
+            denx = index_range[x][2]
             deny = specData[y][1][ymedian]-sigden[x]
-            denwidth = rangelist[x][3]-rangelist[x][2]
+            denwidth = index_range[x][3]-index_range[x][2]
             denheight = sigden[x]*2
             denrec = Rectangle((denx,deny),denwidth,denheight,color=colors[x])
             patches.append(denrec)
             plt.gca().add_patch(denrec)
             
+            # Put object info in top left corner.
+            objname = targetinfo[y].unum
             plt.figtext(0.15,0.86,objname)
             plt.figtext(0.15,0.84,targetinfo[y].name)
+            plt.figtext(0.15,0.82,targetinfo[y].sptype+", "+"%.1f"%sptype)
 
-            spnum = float(targetinfo[y].sptype[1:])
-            if targetinfo[y].sptype[0] == 'L':
-                spnum = spnum + 10
-            plt.figtext(0.15,0.82,targetinfo[y].sptype+", "+"%.1f"%spnum)
-
-            plt.text(denx,deny-0.6*lo,namelist[x],color=colors[x])
-            plt.text(denx,deny-lo,"%.2f" % specind[x][1],color=colors[x])
+            # Put NIR index predicted spectral type info in top right corner.
+            plt.text(denx,deny-0.6*lo,index_name[x],color=colors[x])
+            plt.text(denx,deny-lo,"%.2f" % specind[y][x][1],color=colors[x])
             heights = [0.8,0,0.78,0.76,0.74]
             plt.figtext(0.75,0.82,"NIR Index Predicted Type",color='r')
-            if polyind[x] != 0:
-                plt.text(denx,deny-1.3*lo,"%.2f" % polyind[x],color=colors[x])
-                plt.figtext(0.75,heights[x],namelist[x]+' = '+"%.2f"%polyind[x],color=colors[x])
-            plt.figtext(0.75,0.72,'Overall Average = '+"%.2f"%predicted)
-            plt.figtext(0.75,0.7,'Average w/o CH4K = '+"%.2f"%predicted_wo_CH4K)
+            if spt_ind[x] != 0:
+                plt.text(denx,deny-1.3*lo,"%.2f" % spt_ind[x],color=colors[x])
+                plt.figtext(0.75,heights[x],index_name[x]+' = '+"%.2f"%spt_ind[x]+"$\pm$"+"%.2f"%sig_spt[x],color=colors[x])
+            plt.figtext(0.75,0.72,'Overall Average = '+"%.2f"%spt_avg)
+            plt.figtext(0.75,0.7,'Std Dev = '+"%.2f"%spt_stddev)
+            plt.figtext(0.75,0.68,'Uncertainty = '+"%.2f"%spt_sigavg)
 
-            plt.show()
+        print y
 
         if plot:
+            # Save plot with UNum.pdf as name.
             figpath = '/Users/Joci/Research/specind_plots/' + objname + '.pdf'
             plt.savefig(figpath)
         
+        # Save index data with UNum_specind.txt as name.
         filepath = '/Users/Joci/Research/specind_plots/'+objname+'_specind.txt'
         with open(filepath, 'wb') as f:
             writer = csv.writer(f)
-            writer.writerows(specind)
-
-        opt_type.append(spnum)
-        nir_ind_type.append(predicted)
+            writer.writerow(['Index Name','Index Value','NIR Index Predicted Type','Optical Type'])
+            writer.writerows(specind[y])
