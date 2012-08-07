@@ -23,7 +23,7 @@ import astrotools
 # https://github.com/BDNYC/astrotools
 # We will use the avg_flux function to measure our indices.
 
-def spec_ind(indices_file, specData, targetinfo, plot=True):
+def spec_ind(indices_file, specData, objname, plot=True):
     '''
     Measure the spectral indices as specified by an input file. The
     output is a dictionary containing the name of the spectral index
@@ -126,22 +126,26 @@ def spec_ind(indices_file, specData, targetinfo, plot=True):
         spt_stddev = numpy.std([spt_H2OJ,spt_H2O_A07,spt_H2OH])
         spt_sigavg = numpy.mean([sig_spt_H2OJ,sig_spt_H2O_A07,sig_spt_H2OH])
         
-        if len(targetinfo[y].sptype) >= 3 and targetinfo[y].sptype[-3] in ('p',':'):
-            spnum = float(targetinfo[y].sptype[1:-3])
-        elif targetinfo[y].sptype[-2]==':':
-            spnum = float(targetinfo[y].sptype[1:-2])
-        elif targetinfo[y].sptype[-1] in ('g','b',':','d'):
-            spnum = float(targetinfo[y].sptype[1:-1])
-        else:
-            spnum = float(targetinfo[y].sptype[1:])
-        if targetinfo[y].sptype[0] == 'L':
-            sptype = spnum + 10
-        if targetinfo[y].sptype[0] == 'T':
-            sptype = spnum + 20
+#        if len(targetinfo[y].sptype) >= 3 and targetinfo[y].sptype[-3] in ('p',':'):
+#            spnum = float(targetinfo[y].sptype[1:-3])
+#        elif targetinfo[y].sptype[-2]==':':
+#            spnum = float(targetinfo[y].sptype[1:-2])
+#        elif targetinfo[y].sptype[-1] in ('g','b',':','d'):
+#            spnum = float(targetinfo[y].sptype[1:-1])
+#        else:
+#            spnum = float(targetinfo[y].sptype[1:])
+#        if targetinfo[y].sptype[0] == 'L':
+#            sptype = spnum + 10
+#        if targetinfo[y].sptype[0] == 'T':
+#            sptype = spnum + 20
+#        if targetinfo[y].sptype[0] == 'M':
+#            sptype = spnum
         
+
         specind = [[0]*len(index_name)]*len(specData)
         for x in range(len(index_name)):
-            specind[y][x] = ([index_name[x], indexarray[x][0], spt_ind[x], sptype])
+            specind[y][x] = ([index_name[x], indexarray[x][0],spt_ind[x]])
+        #note, add sptype back to end of specind
         
         #Make Plots
         colors = ['blue','darkblue','dodgerblue','darkcyan','darkgreen','green','darkred','red']
@@ -177,10 +181,10 @@ def spec_ind(indices_file, specData, targetinfo, plot=True):
             plt.gca().add_patch(denrec)
             
             # Put object info in top left corner.
-            objname = targetinfo[y].unum
-            plt.figtext(0.15,0.86,objname)
-            plt.figtext(0.15,0.84,targetinfo[y].name)
-            plt.figtext(0.15,0.82,targetinfo[y].sptype+", "+"%.1f"%sptype)
+#            objname = targetinfo[y].unum
+#            plt.figtext(0.1115,0.86,objname)
+#            plt.figtext(0.15,0.84,targetinfo[y].name)
+#            plt.figtext(0.15,0.82,targetinfo[y].sptype+", "+"%.1f"%sptype)
 
             # Put NIR index predicted spectral type info in top right corner.
             plt.text(denx,deny-0.6*lo,index_name[x],color=colors[x])
@@ -194,15 +198,16 @@ def spec_ind(indices_file, specData, targetinfo, plot=True):
             plt.figtext(0.75,0.7,'Std Dev = '+"%.2f"%spt_stddev)
             plt.figtext(0.75,0.68,'Uncertainty = '+"%.2f"%spt_sigavg)
 
+            plt.title(objname)
         print y
 
         if plot:
             # Save plot with UNum.pdf as name.
-            figpath = '/Users/Joci/Research/specind_plots/' + objname + '.pdf'
+            figpath = '/Users/Joci/Research/Data/Templates/' + objname + '.pdf'
             plt.savefig(figpath)
         
         # Save index data with UNum_specind.txt as name.
-        filepath = '/Users/Joci/Research/specind_plots/'+objname+'_specind.txt'
+        filepath = '/Users/Joci/Research/Data/Templates/'+objname+'_specind.txt'
         with open(filepath, 'wb') as f:
             writer = csv.writer(f)
             writer.writerow(['Index Name','Index Value','NIR Index Predicted Type','Optical Type'])

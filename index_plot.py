@@ -16,7 +16,7 @@ import asciitable
 import matplotlib.pyplot as plt
 import os
 
-def index_plot(sampletable):
+def index_plot(sampletable, rounded=False):
     '''
     Expects output from specind.py -- the resulting .txt files.
     Format:
@@ -48,8 +48,15 @@ def index_plot(sampletable):
                         H2OH[1].append(float(row[2]))
             f.close()
         except IOError:
-            print str(unum)+'_specind.txt not found. Please check that present working directory contains these outputs.'
+            print str(unum)+'_specind.txt not found. Please check that present working directory contains these outputs form specind.py.'
             return
+
+    if rounded == True:
+        for x in range(len(H2OJ[1])):
+            H2OJ[1][x] = round(H2OJ[1][x]*2)/2
+            H2O_A07[1][x] = round(H2O_A07[1][x]*2)/2
+            H2OH[1][x] = round(H2OH[1][x]*2)/2
+
     # Plot the data for each index.
     plt.figure(1,figsize=(19,11))
     
@@ -76,7 +83,7 @@ def index_plot(sampletable):
 
 
     plt.subplot(222)
-    plt.scatter(H2OJ[0],H2OJ[1],marker='^',c='k',facecolor='none',s=30,label='H$_2$O-J Burgasser')
+    plt.scatter(H2OJ[0],H2OJ[1],marker='+',c='k',s=30,label='H$_2$O-J Burgasser')
     
     plt.legend(loc=2,scatterpoints=1,frameon=False)
     
@@ -116,7 +123,7 @@ def index_plot(sampletable):
     plt.plot([9,19],[8,18],'k--')
 
     plt.subplot(224)
-    plt.scatter(H2OH[0],H2OH[1],marker='o',c='k',facecolor='none',s=30,label='H$_2$O-H Burgasser')
+    plt.scatter(H2OH[0],H2OH[1],marker='+',c='k',s=30,label='H$_2$O-H Burgasser')
     
     plt.legend(loc=2,scatterpoints=1,frameon=False)
     
@@ -138,4 +145,8 @@ def index_plot(sampletable):
 
     plt.show()
     filename = os.path.splitext(sampletable)[0]
-    plt.savefig('/Users/Joci/Research/specind_plots/'+filename+'_indiv.pdf')
+    
+    if rounded == True:
+        plt.savefig('/Users/Joci/Research/specind_plots/'+filename+'_rounded.pdf')
+    else:
+        plt.savefig('/Users/Joci/Research/specind_plots/'+filename+'_indiv.pdf')
